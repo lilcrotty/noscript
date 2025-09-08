@@ -36,7 +36,7 @@ var UI = (() => {
     async init(tab) {
       UI.tabId = tab ? tab.id : -1;
       document.documentElement.classList.toggle("incognito",
-        UI.incognito = tab && tab.incognito
+        UI.incognito = tab?.incognito
       );
       let scripts = [
         "/nscl/common/Messages.js",
@@ -64,7 +64,10 @@ var UI = (() => {
             UI.xssBlockedInTab = m.xssBlockedInTab;
             UI.local = m.local;
             UI.sync = m.sync;
-            UI.forceIncognito = UI.incognito && !UI.sync.overrideTorBrowserPolicy;
+            UI.shouldForget =
+                UI.incognito || // PBM context
+                UI.local.isTorBrowser; // Tor/Mullvad Browser in "persistent mode"
+            UI.forceIncognito = UI.shouldForget && !UI.sync.overrideTorBrowserPolicy;
             if (UI.local) {
               if (!UI.local.debug) {
                 debug = () => {}; // be quiet!
@@ -541,8 +544,7 @@ var UI = (() => {
     }
 
     siteNeeds(site, type) {
-      let siteTypes = this.typesMap && this.typesMap.get(site);
-      return !!siteTypes && siteTypes.has(type);
+      return !!this.typesMap?.get(site)?.has(type);
     }
 
     handleEvent(ev) {
@@ -563,10 +565,10 @@ var UI = (() => {
         "%s target %o\n\trow %s, perms %o\npreset %s %s",
         ev.type,
         target,
-        row && row.siteMatch,
-        row && row.perms,
-        preset && preset.value,
-        preset && preset.checked
+        row?.siteMatch,
+        row?.perms,
+        preset?.value,
+        preset?.checked
       );
 
       if (!preset) {
@@ -630,7 +632,7 @@ var UI = (() => {
         if (isCap) {
           perms.set(target.value, target.checked);
         } else if (policyPreset) {
-          if (tempToggle && tempToggle.checked) {
+          if (tempToggle?.checked) {
             policyPreset = policyPreset.tempTwin;
           }
           row.contextMatch = null;
@@ -696,7 +698,7 @@ var UI = (() => {
       }
       debug(
         "Customize preset %s (%o) - Dirty: %s",
-        preset && preset.value,
+        preset?.value,
         perms,
         this.dirty
       );
@@ -768,7 +770,7 @@ var UI = (() => {
         }
         let handleSelection = () => {
           let selected = ctxSelect.querySelector("option:checked");
-          ctxReset.disabled = !(selected && selected.value !== "*");
+          ctxReset.disabled = !(selected?.value !== "*");
           ctxReset.onclick = () => {
             let perms = UI.policy.get(row.siteMatch).perms;
             perms.contextual.delete(row.contextMatch);
@@ -920,7 +922,7 @@ var UI = (() => {
             this.customize(null);
             let prop = `${dir}ElementSibling`;
             newRow = row[prop];
-            if (!(newRow && newRow.matches("tr"))) newRow = row;
+            if (!(newRow?.matches("tr"))) newRow = row;
           }
 
           if (newRow === row) {
@@ -1071,7 +1073,7 @@ var UI = (() => {
         site && url.protocol && site !== url.protocol
           ? policy.get(url.protocol, contextMatch)
           : null;
-      if (overrideDefault && !overrideDefault.siteMatch) overrideDefault = null;
+      if (!overrideDefault?.siteMatch) overrideDefault = null;
 
       let domain = tld.getDomain(hostname);
       let disableDefault = false;
@@ -1080,7 +1082,7 @@ var UI = (() => {
       }
       let secure = Sites.isSecureDomainKey(siteMatch);
       let isOnion =
-        UI.local.isTorBrowser && hostname && hostname.endsWith(".onion");
+        UI.local.isTorBrowser && hostname?.endsWith(".onion");
       let keyStyle = secure
         ? "secure"
         : !domain || /^\w+:/.test(siteMatch)
